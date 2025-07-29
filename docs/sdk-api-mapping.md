@@ -39,51 +39,50 @@ await sdk.auth.getProfile();
 // API: GET /api/v1/auth/profile
 ```
 
-### 3. 課程瀏覽模組
+### 3. 音檔瀏覽模組
 SDK 方法與對應的 API：
 
 ```javascript
-// SDK: 獲取課程列表
-const courses = await sdk.courses.getList();
-// API: GET /api/v1/courses
+// SDK: 獲取音檔列表
+const audios = await sdk.audios.getList();
+// API: GET /api/v1/audios
 
-// SDK: 獲取課程詳情
-const course = await sdk.courses.getDetail('course-101');
-// API: GET /api/v1/courses/{courseId}
+// SDK: 獲取音檔詳情
+const audio = await sdk.audios.getDetail('audio-101');
+// API: GET /api/v1/audios/{audioId}
 
-// SDK: 獲取課程影片列表
-const videos = await sdk.courses.getVideos('course-101');
-// API: GET /api/v1/courses/{courseId}/videos
+// SDK: 獲取音檔分類
+const categories = await sdk.audios.getCategories();
+// API: GET /api/v1/audios/categories
 ```
 
 ### 4. 權限檢查模組
 SDK 方法與對應的 API：
 
 ```javascript
-// SDK: 檢查課程權限
-const hasAccess = await sdk.auth.checkCourseAccess('course-101');
+// SDK: 檢查音檔權限
+const hasAccess = await sdk.auth.checkAudioAccess('audio-101');
 // API: POST /api/v1/access/check
 
-// SDK: 獲取用戶已購買課程
-const purchasedCourses = await sdk.user.getPurchasedCourses();
+// SDK: 獲取用戶可存取音檔
+const accessibleAudios = await sdk.user.getAccessibleAudios();
 // API: GET /api/v1/access/user-permissions
 ```
 
-### 5. 影片播放模組
+### 5. 音檔播放模組
 SDK 方法與對應的 API：
 
 ```javascript
-// SDK: 獲取影片詳情
-const videoInfo = await sdk.video.getDetail('video-001');
-// API: GET /api/v1/videos/{videoId}
+// SDK: 獲取音檔詳情
+const audioInfo = await sdk.audio.getDetail('audio-001');
+// API: GET /api/v1/audios/{audioId}
 
-// SDK: 播放影片（獲取播放憑證）
-const player = await sdk.video.play({
-  courseId: 'course-101',
-  videoId: 'video-001',
+// SDK: 播放音檔（獲取播放憑證）
+const player = await sdk.audio.play({
+  audioId: 'audio-001',
   quality: 'medium'
 });
-// API: POST /api/v1/access/video-token (獲取 STS 憑證)
+// API: POST /api/v1/access/audio-token (獲取 STS 憑證)
 // API: POST /api/v1/playback/start (記錄播放開始)
 ```
 
@@ -107,18 +106,18 @@ SDK 方法與對應的 API：
 
 ```javascript
 // SDK: 開始下載課程
-const downloadTask = await sdk.download.startCourse({
-  courseId: 'course-101',
+const downloadTask = await sdk.download.startAudio({
+  audioId: 'audio-101',
   quality: 'medium'
 });
 // API: POST /api/v1/download/authorize (獲取下載權限和憑證)
 
 // SDK: 檢查下載狀態
-const status = await sdk.download.getStatus('course-101');
+const status = await sdk.download.getStatus('audio-101');
 // API: GET /api/v1/download/status
 
 // SDK: 下載完成回報
-await sdk.download.markComplete('course-101');
+await sdk.download.markComplete('audio-101');
 // API: POST /api/v1/download/complete
 ```
 
@@ -148,7 +147,7 @@ await sdk.download.markComplete('course-101');
 ### 5. 事件系統
 ```javascript
 // 權限變更事件
-sdk.auth.on('accessRevoked', (courseId) => {
+sdk.auth.on('accessRevoked', (audioId) => {
   // 處理權限被撤銷
 });
 
@@ -165,21 +164,21 @@ downloadTask.on('progress', (downloaded, total) => {
 
 ## API 請求流程示例
 
-### 播放影片完整流程：
+### 播放音檔完整流程：
 1. `POST /api/v1/access/check` - 檢查用戶權限
-2. `POST /api/v1/access/video-token` - 獲取 STS 憑證
+2. `POST /api/v1/access/audio-token` - 獲取 STS 憑證
 3. `POST /api/v1/playback/start` - 記錄播放開始
-4. 使用 STS 憑證直接從 OSS/CDN 獲取影片
+4. 使用 STS 憑證直接從 OSS/CDN 獲取音檔
 5. `POST /api/v1/playback/progress` - 定期同步進度（每30秒）
 
-### 下載影片完整流程：
+### 下載音檔完整流程：
 1. `POST /api/v1/access/check` - 檢查用戶權限
 2. `POST /api/v1/download/authorize` - 獲取下載憑證
-3. 使用 STS 憑證直接從 OSS 下載影片
+3. 使用 STS 憑證直接從 OSS 下載音檔
 4. `POST /api/v1/download/complete` - 回報下載完成
 
 ## SDK 不直接調用的 API
 以下 API 主要用於管理後台或其他用途，SDK 不直接使用：
 - 用戶管理相關 API（由管理後台使用）
-- 課程管理相關 API（由管理後台使用）
+- 音檔管理相關 API（由管理後台使用）
 - 數據分析相關 API（由分析系統使用）

@@ -1,12 +1,12 @@
-# 冥想課程平台產品需求文件 (PRD)
+# 冥想音檔平台產品需求文件 (PRD)
 
 ## 專案概述
 
 ### 產品名稱
-冥想課程平台 (Meditation Course Platform)
+冥想音檔平台 (Meditation Audio Platform)
 
 ### 產品目標
-建立一個支援多平台的冥想課程串流平台，提供安全、流暢的影片播放體驗，支援離線下載和進度同步功能。
+建立一個支援多平台的冥想音檔串流平台，提供安全、流暢的音檔播放體驗，支援離線下載和進度同步功能。
 
 ### 開發時程
 **總開發週期：** 2 週
@@ -25,8 +25,8 @@
 ### 核心組件
 1. **手機 SDK** - 提供統一的開發接口
 2. **後端 API** - 業務邏輯和權限控制
-3. **資料庫** - 用戶資料和課程元資料
-4. **阿里雲 OSS** - 影片文件存儲
+3. **資料庫** - 設備資料和音檔元資料
+4. **阿里雲 OSS** - 音檔文件存儲
 5. **CDN** - 內容加速分發
 
 ---
@@ -36,7 +36,7 @@
 ### 功能需求
 
 #### 1. 核心播放功能
-**描述：** 提供影片播放的核心能力
+**描述：** 提供音檔播放的核心能力
 
 **接口設計：**
 ```javascript
@@ -47,13 +47,12 @@ MeditationSDK.initialize({
   environment: 'production'
 });
 
-// 用戶登入
-await sdk.auth.login(userToken);
+// 設備認證
+await sdk.auth.loginDevice();
 
-// 播放影片
-const player = await sdk.video.play({
-  courseId: 'course-101',
-  videoId: 'video-001',
+// 播放音檔
+const player = await sdk.audio.play({
+  audioId: 'audio-001',
   quality: 'medium' // low, medium, high, auto
 });
 
@@ -68,24 +67,24 @@ player.on('error', (error) => {
 ```
 
 **技術實作：**
-- 支援 HLS 和 MP4 格式
+- 支援 MP3 和 AAC 格式
 - 自動品質調整
 - 斷點續播
 - 播放進度雲端同步
 
 #### 2. 權限管理
-**描述：** 管理用戶對不同課程的存取權限
+**描述：** 管理設備對不同音檔的存取權限
 
 **接口設計：**
 ```javascript
-// 檢查課程權限
-const hasAccess = await sdk.auth.checkCourseAccess('course-101');
+// 檢查音檔權限
+const hasAccess = await sdk.auth.checkAudioAccess('audio-101');
 
-// 獲取用戶已購買課程
-const purchasedCourses = await sdk.user.getPurchasedCourses();
+// 獲取設備可存取音檔
+const accessibleAudios = await sdk.device.getAccessibleAudios();
 
 // 權限變更事件
-sdk.auth.on('accessRevoked', (courseId) => {
+sdk.auth.on('accessRevoked', (audioId) => {
   // 處理權限被撤銷
 });
 ```
@@ -96,15 +95,14 @@ sdk.auth.on('accessRevoked', (courseId) => {
 - 自動權限更新
 
 #### 3. 離線下載
-**描述：** 支援課程離線下載和管理
+**描述：** 支援音檔離線下載和管理
 
 **接口設計：**
 ```javascript
-// 下載課程
-const downloadTask = await sdk.download.startCourse({
-  courseId: 'course-101',
-  quality: 'medium',
-  includeSubtitles: true
+// 下載音檔
+const downloadTask = await sdk.download.startAudio({
+  audioId: 'audio-101',
+  quality: 'medium'
 });
 
 // 監聽下載進度
@@ -113,8 +111,8 @@ downloadTask.on('progress', (downloaded, total) => {
 });
 
 // 管理下載內容
-const downloads = await sdk.download.getDownloadedCourses();
-await sdk.download.deleteCourse('course-101');
+const downloads = await sdk.download.getDownloadedAudios();
+await sdk.download.deleteAudio('audio-101');
 ```
 
 **技術實作：**
@@ -122,19 +120,19 @@ await sdk.download.deleteCourse('course-101');
 - 存儲空間管理
 - 下載隊列優化
 
-#### 4. 用戶分析
-**描述：** 收集用戶行為數據用於分析
+#### 4. 使用分析
+**描述：** 收集設備使用行為數據用於分析
 
 **接口設計：**
 ```javascript
 // 自動事件追蹤
-sdk.analytics.trackVideoStart('course-101', 'video-001');
-sdk.analytics.trackVideoComplete('course-101', 'video-001', watchDuration);
+sdk.analytics.trackAudioStart('audio-001');
+sdk.analytics.trackAudioComplete('audio-001', listenDuration);
 
 // 自定義事件
 sdk.analytics.trackEvent('meditation_session_complete', {
   sessionDuration: 1200,
-  courseType: 'mindfulness'
+  audioType: 'mindfulness'
 });
 ```
 
@@ -146,7 +144,7 @@ sdk.analytics.trackEvent('meditation_session_complete', {
 
 ### 效能要求
 - 播放啟動時間 < 2 秒
-- 影片切換延遲 < 1 秒
+- 音檔切換延遲 < 1 秒
 - SDK 體積 < 10MB
 - 記憶體使用 < 50MB
 
@@ -158,22 +156,11 @@ sdk.analytics.trackEvent('meditation_session_complete', {
 
 #### 1. 設備認證 API
 ```
-POST /api/v1/auth/device              # 設備註冊/匿名登入
+POST /api/v1/auth/device              # 設備認證
 GET  /api/v1/auth/device/session      # 檢查設備會話狀態
 ```
 
-#### 2. 用戶認證和綁定 API
-```
-POST /api/v1/auth/bind                # 綁定認證方式 (email/phone)
-POST /api/v1/auth/bind/social         # 社交登入綁定
-POST /api/v1/auth/login              # 已綁定帳號登入
-POST /api/v1/auth/refresh            # Token 更新
-POST /api/v1/auth/unbind             # 解除綁定
-GET  /api/v1/auth/profile            # 獲取用戶資料
-GET  /api/v1/auth/methods            # 獲取用戶認證方式
-```
-
-#### 3. 客戶端管理 API (管理員)
+#### 2. 客戶端管理 API (管理員)
 ```
 GET    /api/v1/admin/clients         # 獲取客戶端列表
 POST   /api/v1/admin/clients         # 建立新客戶端
@@ -183,29 +170,28 @@ POST   /api/v1/admin/clients/{id}/regenerate-secret  # 重新生成密鑰
 GET    /api/v1/admin/clients/{id}/stats             # 客戶端使用統計
 ```
 
-#### 4. 課程管理 API
+#### 3. 音檔管理 API
 ```
-GET  /api/v1/courses                    # 獲取課程列表
-GET  /api/v1/courses/{courseId}         # 獲取課程詳情
-GET  /api/v1/courses/{courseId}/videos  # 獲取課程影片列表
-GET  /api/v1/videos/{videoId}           # 獲取影片詳情
+GET  /api/v1/audios                    # 獲取音檔列表
+GET  /api/v1/audios/{audioId}          # 獲取音檔詳情
+GET  /api/v1/audios/categories         # 獲取音檔分類
 ```
 
-#### 5. 權限控制 API
+#### 4. 權限控制 API
 ```
 POST /api/v1/access/check               # 檢查存取權限
-POST /api/v1/access/video-token         # 獲取影片存取 STS
-GET  /api/v1/access/user-permissions    # 獲取用戶權限
+POST /api/v1/access/audio-token         # 獲取音檔存取 STS
+GET  /api/v1/access/device-permissions   # 獲取設備權限
 ```
 
-#### 6. 播放管理 API
+#### 5. 播放管理 API
 ```
 POST /api/v1/playback/start             # 開始播放
 POST /api/v1/playback/progress          # 更新播放進度
 GET  /api/v1/playback/history          # 獲取播放歷史
 ```
 
-#### 7. 下載管理 API
+#### 6. 下載管理 API
 ```
 POST /api/v1/download/authorize         # 授權下載
 GET  /api/v1/download/status           # 下載狀態查詢
@@ -237,106 +223,23 @@ Response:
   "data": {
     "device_id": "device-ios-abc123",
     "session_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": null,                       # 匿名模式
-      "type": "anonymous",
-      "permissions": ["free_content"]
+    "device": {
+      "type": "device",
+      "permissions": ["audio_access"]
     },
     "expires_at": "2025-07-30T10:00:00Z"
   }
 }
 ```
 
-#### 帳號綁定 API
+#### 音檔存取權限 API
 ```http
-POST /api/v1/auth/bind
-X-Client-ID: client-ios
-X-Client-Secret: {client_secret}
+POST /api/v1/access/audio-token
+Content-Type: application/json
 Authorization: Bearer {session_token}
-Content-Type: application/json
-
-# Email 綁定
-{
-  "auth_type": "email",
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-
-# 手機號碼綁定
-{
-  "auth_type": "phone",
-  "phone": "+886912345678",
-  "verification_code": "123456"
-}
-
-Response:
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "user-xyz789",
-      "type": "registered",
-      "auth_methods": ["email"],
-      "primary_auth": "email",
-      "permissions": ["free_content", "premium_content"]
-    },
-    "session_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-#### 社交登入綁定 API
-```http
-POST /api/v1/auth/bind/social
-X-Client-ID: client-ios
-X-Client-Secret: {client_secret}
-Authorization: Bearer {session_token}
-Content-Type: application/json
 
 {
-  "provider": "google",
-  "access_token": "google_oauth_token",
-  "provider_user_info": {
-    "id": "google_user_id_12345",
-    "email": "user@gmail.com",
-    "name": "User Name",
-    "avatar": "https://avatar.url"
-  }
-}
-
-Response:
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "user-xyz789",
-      "type": "registered",
-      "auth_methods": ["google"],
-      "primary_auth": "google",
-      "profile": {
-        "name": "User Name",
-        "email": "user@gmail.com",
-        "avatar": "https://avatar.url"
-      }
-    },
-    "session_token": "updated_session_token",
-    "access_token": "new_access_token",
-    "refresh_token": "new_refresh_token"
-  }
-}
-```
-
-#### 影片存取權限 API
-```http
-POST /api/v1/access/video-token
-Content-Type: application/json
-Authorization: Bearer {user_token}
-
-{
-  "courseId": "course-101",
-  "videoId": "video-001",
+  "audioId": "audio-001",
   "quality": "medium"
 }
 
@@ -350,9 +253,9 @@ Response:
       "SecurityToken": "xxx",
       "Expiration": "2025-07-29T10:00:00Z"
     },
-    "videoPath": "premium/course-101/video-001.mp4",
-    "ossEndpoint": "https://meditation-videos.oss-cn-hangzhou.aliyuncs.com",
-    "cdnUrl": "https://videos.meditation.com/premium/course-101/video-001.mp4",
+    "audioPath": "premium/audio-001.mp3",
+    "ossEndpoint": "https://meditation-audios.oss-cn-hangzhou.aliyuncs.com",
+    "cdnUrl": "https://audios.meditation.com/premium/audio-001.mp3",
     "expiresAt": 1722254400
   }
 }
@@ -362,10 +265,10 @@ Response:
 ```http
 POST /api/v1/playback/progress
 Content-Type: application/json
-Authorization: Bearer {user_token}
+Authorization: Bearer {session_token}
 
 {
-  "videoId": "video-001",
+  "audioId": "audio-001",
   "currentTime": 125.5,
   "totalTime": 1800,
   "sessionId": "session-uuid",
@@ -379,7 +282,7 @@ Response:
     "progressSaved": true,
     "recommendations": [
       {
-        "videoId": "video-002",
+        "audioId": "audio-002",
         "title": "接下來的冥想練習"
       }
     ]
@@ -392,7 +295,7 @@ Response:
 #### 1. 框架選擇
 - **Node.js + Express** 或 **Python + FastAPI**
 - **TypeScript** 用於型別安全
-- **JWT** 用於用戶認證
+- **JWT** 用於設備認證
 - **Redis** 用於快取和 session
 
 #### 2. 安全機制
@@ -433,49 +336,26 @@ CREATE INDEX idx_devices_type ON devices(device_type);
 CREATE INDEX idx_devices_active ON devices(is_active, last_seen_at);
 ```
 
-#### 2. 用戶表 (users)
+#### 2. 設備權限表 (device_permissions)
 ```sql
-CREATE TABLE users (
-    id VARCHAR(50) PRIMARY KEY,                    -- user-{uuid}
-    primary_device_id VARCHAR(50),                 -- 主要設備ID
-    subscription_level VARCHAR(50) DEFAULT 'free', -- free, basic, premium, vip
-    subscription_expires_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    FOREIGN KEY (primary_device_id) REFERENCES devices(id)
-);
-
-CREATE INDEX idx_users_subscription ON users(subscription_level, subscription_expires_at);
-CREATE INDEX idx_users_device ON users(primary_device_id);
-```
-
-#### 3. 用戶認證方式表 (user_auth_methods)
-```sql
-CREATE TABLE user_auth_methods (
-    id VARCHAR(50) PRIMARY KEY,
-    user_id VARCHAR(50) NOT NULL,
-    auth_type ENUM('email', 'phone', 'google', 'apple', 'facebook') NOT NULL,
-    auth_identifier VARCHAR(255) NOT NULL,         -- email、手機號、社交ID
-    auth_credential VARCHAR(255),                  -- 加密後的密碼或 token
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_primary BOOLEAN DEFAULT FALSE,              -- 主要認證方式
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    UNIQUE KEY unique_auth_method (auth_type, auth_identifier),
-    INDEX idx_user_auth_methods (user_id, is_primary)
-);
-```
-
-#### 4. 設備用戶會話表 (device_user_sessions)
-```sql
-CREATE TABLE device_user_sessions (
+CREATE TABLE device_permissions (
     id VARCHAR(50) PRIMARY KEY,
     device_id VARCHAR(50) NOT NULL,
-    user_id VARCHAR(50),                           -- NULL 表示匿名模式
+    permission_level ENUM('basic', 'premium', 'vip') DEFAULT 'basic',
+    granted_at TIMESTAMP DEFAULT NOW(),
+    expires_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    FOREIGN KEY (device_id) REFERENCES devices(id),
+    INDEX idx_device_permissions (device_id, is_active)
+);
+```
+
+#### 3. 設備會話表 (device_sessions)
+```sql
+CREATE TABLE device_sessions (
+    id VARCHAR(50) PRIMARY KEY,
+    device_id VARCHAR(50) NOT NULL,
     session_token VARCHAR(255) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -483,13 +363,11 @@ CREATE TABLE device_user_sessions (
     is_active BOOLEAN DEFAULT TRUE,
     
     FOREIGN KEY (device_id) REFERENCES devices(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    INDEX idx_device_sessions (device_id, is_active),
-    INDEX idx_user_sessions (user_id, is_active)
+    INDEX idx_device_sessions (device_id, is_active)
 );
 ```
 
-#### 5. API 客戶端表 (api_clients)
+#### 4. API 客戶端表 (api_clients)
 ```sql
 CREATE TABLE api_clients (
     id VARCHAR(50) PRIMARY KEY,              -- client-web, client-ios 等
@@ -498,7 +376,7 @@ CREATE TABLE api_clients (
     client_type ENUM('web', 'mobile', 'sdk', 'partner') NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     rate_limit_per_minute INTEGER DEFAULT 100,
-    allowed_scopes JSON,                     -- ['auth', 'courses', 'videos', 'playback']
+    allowed_scopes JSON,                     -- ['auth', 'audios', 'playback']
     metadata JSON,                           -- 額外資訊
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -509,75 +387,58 @@ CREATE INDEX idx_api_clients_active ON api_clients(is_active);
 CREATE INDEX idx_api_clients_type ON api_clients(client_type);
 ```
 
-#### 6. 課程表 (courses)
+#### 5. 音檔表 (audios)
 ```sql
-CREATE TABLE courses (
-    id VARCHAR(50) PRIMARY KEY, -- course-101
+CREATE TABLE audios (
+    id VARCHAR(50) PRIMARY KEY, -- audio-101
     title VARCHAR(255) NOT NULL,
     description TEXT,
     instructor_name VARCHAR(100),
     category VARCHAR(100), -- mindfulness, sleep, focus
     level VARCHAR(50), -- beginner, intermediate, advanced
     access_level VARCHAR(50) NOT NULL, -- free, basic, premium, vip
-    duration_minutes INTEGER,
+    duration_seconds INTEGER,
     thumbnail_url VARCHAR(500),
-    preview_video_url VARCHAR(500),
+    audio_path VARCHAR(500) NOT NULL, -- OSS 中的檔案路徑
+    file_size_mb DECIMAL(10,2),
+    bitrate INTEGER, -- 128, 192, 320 kbps
     price DECIMAL(10,2),
     is_published BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_courses_category ON courses(category);
-CREATE INDEX idx_courses_access_level ON courses(access_level);
-CREATE INDEX idx_courses_published ON courses(is_published);
+CREATE INDEX idx_audios_category ON audios(category);
+CREATE INDEX idx_audios_access_level ON audios(access_level);
+CREATE INDEX idx_audios_published ON audios(is_published);
 ```
 
-#### 7. 影片表 (videos)
+#### 6. 設備音檔權限表 (device_audio_access)
 ```sql
-CREATE TABLE videos (
-    id VARCHAR(50) PRIMARY KEY, -- video-001
-    course_id VARCHAR(50) REFERENCES courses(id),
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    duration_seconds INTEGER NOT NULL,
-    order_index INTEGER NOT NULL,
-    video_path VARCHAR(500) NOT NULL, -- OSS 中的檔案路徑
-    thumbnail_path VARCHAR(500),
-    subtitle_path VARCHAR(500),
-    file_size_mb DECIMAL(10,2),
-    resolution VARCHAR(20), -- 1080p, 720p, 480p
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_videos_course ON videos(course_id, order_index);
-```
-
-#### 8. 用戶課程權限表 (user_course_access)
-```sql
-CREATE TABLE user_course_access (
+CREATE TABLE device_audio_access (
     id VARCHAR(50) PRIMARY KEY,
-    user_id VARCHAR(50) REFERENCES users(id),
-    course_id VARCHAR(50) REFERENCES courses(id),
-    access_type VARCHAR(50) NOT NULL, -- purchased, trial, subscription
+    device_id VARCHAR(50) NOT NULL,
+    audio_id VARCHAR(50) NOT NULL,
+    access_type VARCHAR(50) NOT NULL, -- granted, purchased
     granted_at TIMESTAMP DEFAULT NOW(),
     expires_at TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
     
-    UNIQUE(user_id, course_id)
+    FOREIGN KEY (device_id) REFERENCES devices(id),
+    FOREIGN KEY (audio_id) REFERENCES audios(id),
+    UNIQUE KEY unique_device_audio (device_id, audio_id)
 );
 
-CREATE INDEX idx_user_course_access ON user_course_access(user_id, is_active);
+CREATE INDEX idx_device_audio_access ON device_audio_access(device_id, audio_id);
 ```
 
-#### 9. 播放記錄表 (playback_sessions)
+#### 7. 播放記錄表 (playback_sessions)
 ```sql
 CREATE TABLE playback_sessions (
     id VARCHAR(50) PRIMARY KEY,
     device_id VARCHAR(50) REFERENCES devices(id),
-    user_id VARCHAR(50) REFERENCES users(id),        -- 可為 NULL（匿名模式）
-    video_id VARCHAR(50) REFERENCES videos(id),
+    device_id VARCHAR(50) REFERENCES devices(id),
+    audio_id VARCHAR(50) REFERENCES audios(id),
     session_id VARCHAR(100) UNIQUE NOT NULL,
     started_at TIMESTAMP DEFAULT NOW(),
     last_position_seconds INTEGER DEFAULT 0,
@@ -587,18 +448,18 @@ CREATE TABLE playback_sessions (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_playback_device_video ON playback_sessions(device_id, video_id);
-CREATE INDEX idx_playback_user_video ON playback_sessions(user_id, video_id);
+CREATE INDEX idx_playback_device_audio ON playback_sessions(device_id, audio_id);
+CREATE INDEX idx_playback_device_audio ON playback_sessions(device_id, audio_id);
 CREATE INDEX idx_playback_session ON playback_sessions(session_id);
 ```
 
-#### 10. 下載記錄表 (download_records)
+#### 8. 下載記錄表 (download_records)
 ```sql
 CREATE TABLE download_records (
     id VARCHAR(50) PRIMARY KEY,
     device_id VARCHAR(50) REFERENCES devices(id),
-    user_id VARCHAR(50) REFERENCES users(id),        -- 可為 NULL（匿名模式）
-    video_id VARCHAR(50) REFERENCES videos(id),
+    device_id VARCHAR(50) REFERENCES devices(id),
+    audio_id VARCHAR(50) REFERENCES audios(id),
     quality VARCHAR(20) NOT NULL,
     file_size_mb DECIMAL(10,2),
     downloaded_at TIMESTAMP DEFAULT NOW(),
@@ -607,30 +468,30 @@ CREATE TABLE download_records (
 );
 
 CREATE INDEX idx_downloads_device ON download_records(device_id, is_active);
-CREATE INDEX idx_downloads_user_device ON download_records(user_id, device_id, is_active);
+CREATE INDEX idx_downloads_device ON download_records(device_id, is_active);
 ```
 
 ### Redis 快取結構
 ```
 # 設備會話快取
-device:session:{device_id} -> {session_token, user_id, expires_at}
+device:session:{device_id} -> {session_token, expires_at}
 
-# 用戶 Session
-user:session:{user_id} -> {jwt_token, expires_at}
+# 設備 Token 快取
+device:token:{device_id} -> {jwt_token, expires_at}
 
 # API 客戶端快取
 client:{client_id} -> {client_info, rate_limit, scopes}
 
 # STS 憑證快取
-sts:video:{user_id}:{video_id} -> {credentials, expires_at}
-sts:video:device:{device_id}:{video_id} -> {credentials, expires_at}
+sts:audio:device:{device_id}:{audio_id} -> {credentials, expires_at}
+sts:audio:device:{device_id}:{audio_id} -> {credentials, expires_at}
 
-# 課程權限快取
-user:access:{user_id} -> {course_ids: [array], expires_at}
+# 音檔權限快取
+device:access:{device_id} -> {audio_ids: [array], expires_at}
 
 # 播放進度快取
-playback:{user_id}:{video_id} -> {position, updated_at}
-playback:device:{device_id}:{video_id} -> {position, updated_at}
+playback:device:{device_id}:{audio_id} -> {position, updated_at}
+playback:device:{device_id}:{audio_id} -> {position, updated_at}
 
 # API Rate Limiting
 rate_limit:{client_id}:{window} -> {count, window_start}
@@ -642,28 +503,27 @@ rate_limit:{client_id}:{window} -> {count, window_start}
 
 ### 存儲結構設計
 ```
-meditation-videos/
+meditation-audios/
 ├── public/                          # 公開內容 (縮圖、預覽)
 │   ├── thumbnails/
-│   │   ├── course-101-thumb.jpg
-│   │   └── video-001-thumb.jpg
+│   │   └── audio-001-thumb.jpg
 │   └── previews/
-│       └── course-101-preview.mp4
-├── course-free-001/                 # 免費課程
-│   ├── video-001.mp4
-│   ├── video-001-720p.mp4
-│   └── video-001-480p.mp4
+│       └── audio-001-preview.mp3
+├── free/                            # 免費音檔
+│   ├── audio-001.mp3
+│   ├── audio-001-128k.mp3
+│   └── audio-001-320k.mp3
 ├── basic/                           # 基礎會員內容
-│   ├── course-201/
-│   └── course-202/
+│   ├── audio-201.mp3
+│   └── audio-202.mp3
 ├── premium/                         # 付費會員內容
-│   ├── course-301/
-│   └── course-302/
+│   ├── audio-301.mp3
+│   └── audio-302.mp3
 ├── vip/                            # VIP 會員內容
-│   ├── course-401/
+│   ├── audio-401.mp3
 │   └── exclusive/
-└── user-uploads/                   # 用戶上傳內容
-    └── {user_id}/
+└── device-uploads/                 # 設備上傳內容
+    └── {device_id}/
 ```
 
 ### OSS 配置需求
@@ -675,8 +535,8 @@ meditation-videos/
 - **跨域設定：** 允許 SDK 直接存取
 
 #### 2. CDN 設定
-- **加速域名：** videos.meditation.com
-- **快取策略：** 影片文件快取 7 天
+- **加速域名：** audios.meditation.com
+- **快取策略：** 音檔文件快取 7 天
 - **URL 鑑權：** 啟用 Type A 鑑權
 
 #### 3. 安全設定
@@ -688,7 +548,7 @@ meditation-videos/
 
 ## 系統整合流程
 
-### 新用戶完整體驗流程
+### 新設備完整體驗流程
 
 1. **App 啟動和 SDK 初始化**
    ```
@@ -702,26 +562,19 @@ meditation-videos/
    API → SDK: 返回 session_token (匿名模式)
    ```
 
-3. **匿名用戶瀏覽和使用**
+3. **設備瀏覽和使用**
    ```
-   SDK → API: GET /api/v1/courses (免費內容)
-   SDK → API: POST /api/v1/playback/start (匿名播放記錄)
-   ```
-
-4. **用戶決定註冊綁定**
-   ```
-   用戶輸入 Email → SDK → API: POST /api/v1/auth/bind
-   API → Database: 建立用戶記錄，關聯設備
-   API → SDK: 返回完整用戶 token
+   SDK → API: GET /api/v1/audios (音檔列表)
+   SDK → API: POST /api/v1/playback/start (播放記錄)
    ```
 
-5. **升級後的完整功能**
+4. **音檔播放權限檢查**
    ```
-   SDK → API: GET /api/v1/courses (包含付費內容)
-   SDK → API: POST /api/v1/access/video-token (獲取付費內容權限)
+   SDK → API: POST /api/v1/access/check (檢查設備權限)
+   SDK → API: POST /api/v1/access/audio-token (獲取 STS 憑證)
    ```
 
-### 用戶播放影片完整流程（含認證）
+### 設備播放音檔完整流程（含認證）
 
 1. **三層認證檢查**
    ```
@@ -731,7 +584,7 @@ meditation-videos/
 
 2. **權限檢查**
    ```
-   API → Database: 查詢用戶/設備權限
+   API → Database: 查詢設備權限
    API → Redis: 檢查權限快取
    ```
 
@@ -743,7 +596,7 @@ meditation-videos/
 
 4. **播放和記錄**
    ```
-   SDK → OSS/CDN: 直接播放影片
+   SDK → OSS/CDN: 直接播放音檔
    SDK → API: POST /api/v1/playback/progress (進度同步)
    ```
 
@@ -761,8 +614,8 @@ meditation-videos/
 
 3. **分段下載**
    ```
-   SDK → OSS: 直接下載影片文件
-   SDK → 本地存儲: 加密存儲影片
+   SDK → OSS: 直接下載音檔文件
+   SDK → 本地存儲: 加密存儲音檔
    ```
 
 4. **下載完成**
@@ -778,15 +631,15 @@ meditation-videos/
 
 #### 1. 技術指標
 - **API 響應時間** < 200ms
-- **影片載入時間** < 2 秒
+- **音檔載入時間** < 2 秒
 - **系統可用性** > 99.9%
 - **錯誤率** < 0.1%
 
 #### 2. 業務指標
-- **日活躍用戶** (DAU)
-- **影片完成率**
+- **日活躍設備** (DAD)
+- **音檔完成率**
 - **下載成功率**
-- **用戶留存率**
+- **設備留存率**
 
 ### 日誌和監控
 
@@ -795,11 +648,10 @@ meditation-videos/
 {
   "timestamp": "2025-07-29T10:30:00Z",
   "level": "INFO",
-  "service": "video-api",
-  "user_id": "user-123",
-  "action": "video_play_request",
-  "course_id": "course-101",
-  "video_id": "video-001",
+  "service": "audio-api",
+  "device_id": "device-123",
+  "action": "audio_play_request",
+  "audio_id": "audio-001",
   "duration": 150,
   "status": "success"
 }
@@ -818,12 +670,12 @@ meditation-videos/
 
 #### 1. 開發環境
 - **API：** https://dev-api.meditation.com
-- **OSS：** meditation-videos-dev
+- **OSS：** meditation-audios-dev
 - **資料庫：** PostgreSQL 開發實例
 
 #### 2. 生產環境
 - **API：** https://api.meditation.com
-- **OSS：** meditation-videos-prod
+- **OSS：** meditation-audios-prod
 - **資料庫：** PostgreSQL 主從架構
 
 ### CI/CD 流程
@@ -848,14 +700,14 @@ meditation-videos/
 ### 技術風險
 
 #### 1. STS 憑證洩露
-**風險：** 用戶憑證被第三方獲取
+**風險：** 設備憑證被第三方獲取
 **應對：**
 - 憑證有效期限制在 2 小時內
 - 實施 IP 白名單限制
 - 監控異常存取模式
 
 #### 2. OSS 頻寬成本
-**風險：** 大量用戶同時存取導致成本激增
+**風險：** 大量設備同時存取導致成本激增
 **應對：**
 - CDN 分流減少 OSS 直接存取
 - 實施頻寬限制
@@ -877,7 +729,7 @@ meditation-videos/
 - 水印技術
 - 法律追溯機制
 
-#### 2. 用戶數據安全
+#### 2. 設備數據安全
 **風險：** 個人資料洩露
 **應對：**
 - 資料加密存儲
@@ -903,9 +755,9 @@ meditation-videos/
 - ✅ 文檔撰寫和部署
 
 ### 驗收標準
-1. 用戶可以成功登入和瀏覽課程
-2. 付費用戶可以播放高畫質影片
-3. 免費用戶只能存取免費內容
+1. 設備可以成功認證和瀏覽音檔
+2. 設備可以播放高品質音檔
+3. 設備權限控制正常運作
 4. 影片播放流暢，載入時間 < 2秒
 5. 離線下載功能正常運作
 6. 播放進度可跨設備同步

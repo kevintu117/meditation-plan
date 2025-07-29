@@ -14,7 +14,7 @@ CREATE TABLE api_clients (
     client_type ENUM('web', 'mobile', 'sdk', 'partner') NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     rate_limit_per_minute INTEGER DEFAULT 100,
-    allowed_scopes JSON,                     -- ['auth', 'courses', 'videos', 'playback']
+    allowed_scopes JSON,                     -- ['auth', 'audios', 'playback']
     metadata JSON,                           -- 額外資訊 (version, platform 等)
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -29,53 +29,56 @@ CREATE INDEX idx_api_clients_type ON api_clients(client_type);
 ### 預設客戶端資料
 ```sql
 INSERT INTO api_clients (id, name, client_secret, client_type, rate_limit_per_minute, allowed_scopes) VALUES
-('client-web', '官方網頁版', '$2b$10$...', 'web', 200, '["auth", "courses", "videos", "playback"]'),
-('client-ios', '官方 iOS App', '$2b$10$...', 'mobile', 150, '["auth", "courses", "videos", "playback", "download"]'),
-('client-android', '官方 Android App', '$2b$10$...', 'mobile', 150, '["auth", "courses", "videos", "playback", "download"]'),
-('client-sdk', 'JavaScript SDK', '$2b$10$...', 'sdk', 500, '["auth", "courses", "videos", "playback", "download"]');
+('client-web', '官方網頁版', '$2b$10$...', 'web', 200, '["auth", "audios", "playback"]'),
+('client-ios', '官方 iOS App', '$2b$10$...', 'mobile', 150, '["auth", "audios", "playback", "download"]'),
+('client-android', '官方 Android App', '$2b$10$...', 'mobile', 150, '["auth", "audios", "playback", "download"]'),
+('client-sdk', 'JavaScript SDK', '$2b$10$...', 'sdk', 500, '["auth", "audios", "playback", "download"]');
 ```
 
 ## 認證流程
 
-### 雙重認證機制
-系統採用**雙重認證**機制：
-1. **第一層：Client 認證** - 驗證請求來源的合法性
-2. **第二層：User 認證** - 驗證用戶身份
+### Client 認證機制
+系統採用 **Client 認證**機制：
+1. **Client 認證** - 驗證請求來源的合法性
+2. **Device 認證** - 驗證設備身份
 
 ### 完整認證流程
 
-#### 1. 用戶登入流程
+#### 1. 設備認證流程
 ```http
-POST /api/v1/auth/login
+POST /api/v1/auth/device
 X-Client-ID: client-sdk
 X-Client-Secret: {client_secret}
 Content-Type: application/json
 
 {
-  "username": "user@example.com",
-  "password": "password"
+  "device_id": "device-ios-abc123",
+  "device_info": {
+    "model": "iPhone 15 Pro",
+    "os_version": "iOS 17.1"
+  }
 }
 ```
 
 **處理順序：**
 1. 系統先驗證 Client ID/Secret（ClientAuthGuard）
-2. 通過後再驗證用戶帳密
-3. 返回用戶 JWT Token
+2. 通過後註冊/驗證設備
+3. 返回設備 Session Token
 
 #### 2. 後續 API 請求
 ```http
-GET /api/v1/courses
+GET /api/v1/audios
 X-Client-ID: client-sdk
 X-Client-Secret: {client_secret}
-Authorization: Bearer {user_jwt_token}
+Authorization: Bearer {device_session_token}
 ```
 
 **處理順序：**
 1. 驗證 Client 認證（必需）
-2. 驗證 User JWT Token（需要用戶身份的 API）
-3. 檢查用戶權限和 API Scope
+2. 驗證 Device Session Token
+3. 檢查設備權限和 API Scope
 
-#### 3. 不需要用戶認證的 API
+#### 3. 不需要設備認證的 API
 某些 API 只需要 Client 認證：
 ```http
 GET /api/v1/health
@@ -104,7 +107,7 @@ async function makeApiCall(endpoint, data) {
       'Content-Type': 'application/json',
       'X-Client-ID': this.clientId,
       'X-Client-Secret': this.clientSecret,
-      'Authorization': `Bearer ${this.accessToken}`
+      'Authorization': `Bearer ${this.sessionToken}`
     },
     body: JSON.stringify(data)
   });
@@ -256,7 +259,7 @@ export class ClientAuthGuard implements CanActivate {
     },
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,    // 第三個執行（基於需要）
+      useClass: DeviceAuthGuard, // 第三個執行（基於需要）
     },
   ],
 })
@@ -269,11 +272,11 @@ export class AppModule {}
 @Controller('auth')
 export class AuthController {
   
-  // 登入：只需要 Client 認證，不需要 User 認證
-  @Post('login')
-  @SkipUserAuth() // 跳過 JWT 驗證
-  async login(
-    @Body() loginDto: LoginDto,
+  // 設備註冊：只需要 Client 認證，不需要 Device 認證
+  @Post('device')
+  @SkipDeviceAuth() // 跳過 Device 驗證
+  async registerDevice(
+    @Body() deviceDto: DeviceRegisterDto,
     @Request() req
   ) {
     // req.client 已由 ClientAuthGuard 設定
@@ -284,17 +287,17 @@ export class AuthController {
       throw new ForbiddenException('Client not authorized for auth operations');
     }
     
-    // 執行用戶登入邏輯
-    return this.authService.login(loginDto);
+    // 執行設備註冊邏輯
+    return this.authService.registerDevice(deviceDto);
   }
   
-  // 獲取用戶資料：需要雙重認證
-  @Get('profile')
-  @UseGuards(JwtAuthGuard) // 明確需要用戶認證
-  async getProfile(@Request() req) {
+  // 檢查設備會話：需要設備認證
+  @Get('device/session')
+  @UseGuards(DeviceAuthGuard) // 明確需要設備認證
+  async getDeviceSession(@Request() req) {
     // req.client 來自 ClientAuthGuard
-    // req.user 來自 JwtAuthGuard
-    return this.authService.getProfile(req.user.id);
+    // req.device 來自 DeviceAuthGuard
+    return this.authService.getDeviceSession(req.device.id);
   }
 }
 ```
@@ -397,9 +400,10 @@ export class RateLimitGuard implements CanActivate {
 
 ## 未來擴充
 
-### 1. OAuth 2.0 支援
-- 實作完整的 OAuth 2.0 流程
-- 支援第三方應用授權
+### 1. 設備管理強化
+- 設備指紋識別
+- 異常設備偵測
+- 設備黑名單管理
 
 ### 2. API Scope 管理
 - 不同 client 有不同的 API 存取權限

@@ -21,7 +21,7 @@ Response:
         "client_type": "web",
         "is_active": true,
         "rate_limit_per_minute": 200,
-        "allowed_scopes": ["auth", "courses", "videos", "playback"],
+        "allowed_scopes": ["auth", "audios", "playback"],
         "created_at": "2025-07-29T10:00:00Z",
         "last_used_at": "2025-07-29T15:30:00Z"
       }
@@ -42,7 +42,7 @@ Content-Type: application/json
   "name": "合作夥伴 ABC",
   "client_type": "partner",
   "rate_limit_per_minute": 50,
-  "allowed_scopes": ["auth", "courses"],
+  "allowed_scopes": ["auth", "audios"],
   "metadata": {
     "contact": "admin@partner-abc.com",
     "description": "第三方合作夥伴"
@@ -70,7 +70,7 @@ Content-Type: application/json
 {
   "name": "更新後的名稱",
   "rate_limit_per_minute": 100,
-  "allowed_scopes": ["auth", "courses", "videos"],
+  "allowed_scopes": ["auth", "audios"],
   "is_active": true
 }
 ```
@@ -113,7 +113,7 @@ Response:
         {"hour": "2025-07-29T15:00:00Z", "count": 189}
       ],
       "top_endpoints": [
-        {"/api/v1/courses": 5432},
+        {"/api/v1/audios": 5432},
         {"/api/v1/auth/login": 3210}
       ]
     }
