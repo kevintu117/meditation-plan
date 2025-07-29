@@ -132,6 +132,153 @@ sequenceDiagram
     SDK-->>App: 登入成功，恢復完整功能
 ```
 
+## 業務流程示例 - 取得課程
+
+### 5. 匿名用戶瀏覽課程流程
+```mermaid
+sequenceDiagram
+    participant App as 手機 App
+    participant SDK as Meditation SDK
+    participant API as API Server
+    participant DB as Database
+    participant Cache as Redis
+
+    Note over App: 匿名用戶瀏覽課程
+    App->>SDK: sdk.courses.getList()
+    
+    Note over SDK: 使用 session_token
+    SDK->>API: GET /api/v1/courses
+    Note over SDK,API: Headers: X-Client-ID, X-Client-Secret, Authorization: Bearer {session_token}
+    
+    Note over API: 1. 三層認證檢查
+    API->>API: ClientAuthGuard + RateLimitGuard + DeviceAuthGuard
+    
+    Note over API: 2. 檢查快取
+    API->>Cache: 查詢課程快取
+    
+    alt 快取未命中
+        Note over API: 3. 查詢資料庫
+        API->>DB: SELECT * FROM courses WHERE access_level IN ('free')
+        DB-->>API: 返回免費課程列表
+        
+        Note over API: 4. 更新快取
+        API->>Cache: 快取課程資料 (30分鐘)
+    end
+    
+    Note over API: 5. 權限過濾
+    API->>API: 過濾匿名用戶可存取的課程
+    
+    API-->>SDK: 返回 { courses: [...], user_access_level: "anonymous" }
+    SDK-->>App: 顯示免費課程 + 付費課程預覽
+```
+
+### 6. 註冊用戶取得完整課程流程
+```mermaid
+sequenceDiagram
+    participant App as 手機 App
+    participant SDK as Meditation SDK
+    participant API as API Server
+    participant DB as Database
+    participant Cache as Redis
+
+    Note over App: 註冊用戶瀏覽所有課程
+    App->>SDK: sdk.courses.getList()
+    
+    Note over SDK: 使用 access_token
+    SDK->>API: GET /api/v1/courses
+    Note over SDK,API: Headers: X-Client-ID, X-Client-Secret, Authorization: Bearer {access_token}
+    
+    Note over API: 1. 三層認證檢查
+    API->>API: ClientAuthGuard + RateLimitGuard + JwtAuthGuard
+    
+    Note over API: 2. 獲取用戶訂閱資訊
+    API->>Cache: 查詢用戶權限快取
+    
+    alt 快取未命中
+        API->>DB: 查詢 users 表獲取 subscription_level
+        API->>DB: 查詢 user_course_access 表獲取課程權限
+        API->>Cache: 快取用戶權限 (15分鐘)
+    end
+    
+    Note over API: 3. 查詢課程列表
+    API->>Cache: 查詢完整課程快取
+    
+    alt 快取未命中
+        API->>DB: SELECT * FROM courses WHERE is_published = true
+        DB-->>API: 返回所有已發布課程
+        API->>Cache: 快取課程資料 (30分鐘)
+    end
+    
+    Note over API: 4. 應用權限邏輯
+    API->>API: 根據用戶訂閱等級過濾課程
+    API->>API: 標記用戶可存取的課程
+    
+    API-->>SDK: 返回 { courses: [...], user_access: {...} }
+    SDK-->>App: 顯示完整課程列表 + 權限狀態
+```
+
+### 7. 課程詳情和影片權限檢查流程
+```mermaid
+sequenceDiagram
+    participant App as 手機 App
+    participant SDK as Meditation SDK
+    participant API as API Server
+    participant DB as Database
+    participant Cache as Redis
+    participant OSS as 阿里雲 OSS
+
+    Note over App: 用戶點擊課程進入詳情
+    App->>SDK: sdk.courses.getDetail('course-101')
+    
+    SDK->>API: GET /api/v1/courses/course-101
+    Note over SDK,API: Headers: 完整認證資訊
+    
+    Note over API: 1. 認證檢查
+    API->>API: 完整三層認證
+    
+    Note over API: 2. 課程權限檢查
+    SDK->>API: POST /api/v1/access/check
+    Note over SDK,API: Body: { course_id: "course-101" }
+    
+    API->>Cache: 檢查權限快取
+    
+    alt 需要檢查權限
+        API->>DB: 查詢課程 access_level
+        API->>DB: 查詢用戶訂閱和課程權限
+        API->>API: 計算存取權限
+        API->>Cache: 快取權限結果 (10分鐘)
+    end
+    
+    alt 有存取權限
+        Note over API: 3. 返回課程詳情
+        API->>DB: 查詢課程和影片列表
+        API-->>SDK: 返回 { course: {...}, videos: [...], access: true }
+        
+        Note over App: 用戶點擊播放影片
+        App->>SDK: sdk.video.play({ courseId, videoId })
+        
+        Note over SDK: 4. 獲取播放憑證
+        SDK->>API: POST /api/v1/access/video-token
+        Note over SDK,API: Body: { courseId, videoId, quality: "medium" }
+        
+        API->>API: 再次驗證影片存取權限
+        API->>OSS: 申請 STS 臨時憑證
+        OSS-->>API: 返回 STS 憑證
+        
+        API-->>SDK: 返回 { credentials: {...}, videoPath: "...", cdnUrl: "..." }
+        
+        Note over SDK: 5. 直接從 OSS/CDN 播放
+        SDK->>OSS: 使用 STS 憑證存取影片
+        OSS-->>SDK: 返回影片串流
+        
+        SDK-->>App: 開始播放影片
+        
+    else 無存取權限
+        API-->>SDK: 返回 { access: false, upgrade_required: true }
+        SDK-->>App: 顯示升級提示
+    end
+```
+
 ### 3. 後續 API 請求流程
 ```mermaid
 sequenceDiagram
@@ -279,6 +426,60 @@ async getStatus() {
 }
 ```
 
+### 5. 課程存取相關錯誤
+
+#### 5a. 課程不存在
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Course not found",
+  "code": "COURSE_NOT_FOUND"
+}
+```
+
+#### 5b. 課程存取權限不足
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "Insufficient permission to access this course",
+  "code": "COURSE_ACCESS_DENIED",
+  "required_subscription": "premium"
+}
+```
+
+#### 5c. 影片不存在
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Video not found",
+  "code": "VIDEO_NOT_FOUND"
+}
+```
+
+#### 5d. STS 憑證獲取失敗
+```json
+{
+  "statusCode": 500,
+  "error": "Internal Server Error",
+  "message": "Failed to generate video access token",
+  "code": "STS_TOKEN_FAILED"
+}
+```
+
+#### 5e. 訂閱已過期
+```json
+{
+  "statusCode": 402,
+  "error": "Payment Required",
+  "message": "Subscription has expired",
+  "code": "SUBSCRIPTION_EXPIRED",
+  "expired_at": "2025-07-15T00:00:00Z"
+}
+```
+
 ## SDK 內部處理邏輯
 
 ### 1. 自動認證管理
@@ -373,6 +574,71 @@ class MeditationSDK {
 
   isRegistered() {
     return this.userInfo && this.userInfo.type === 'registered';
+  }
+
+  // 課程相關方法
+  async getCourseList() {
+    const response = await this.makeRequest('/api/v1/courses');
+    const data = await response.json();
+    return data.data;
+  }
+
+  async getCourseDetail(courseId) {
+    const response = await this.makeRequest(`/api/v1/courses/${courseId}`);
+    const data = await response.json();
+    return data.data;
+  }
+
+  async checkCourseAccess(courseId) {
+    const response = await this.makeRequest('/api/v1/access/check', {
+      method: 'POST',
+      body: JSON.stringify({ course_id: courseId })
+    });
+    const data = await response.json();
+    return data.data;
+  }
+
+  async getVideoToken(courseId, videoId, quality = 'medium') {
+    const response = await this.makeRequest('/api/v1/access/video-token', {
+      method: 'POST',
+      body: JSON.stringify({ courseId, videoId, quality })
+    });
+    const data = await response.json();
+    return data.data;
+  }
+
+  // 播放影片的完整流程
+  async playVideo(courseId, videoId, quality = 'medium') {
+    try {
+      // 1. 檢查課程權限
+      const accessCheck = await this.checkCourseAccess(courseId);
+      if (!accessCheck.access) {
+        throw new Error('無權限存取此課程');
+      }
+
+      // 2. 獲取播放憑證
+      const tokenData = await this.getVideoToken(courseId, videoId, quality);
+      
+      // 3. 記錄播放開始
+      await this.makeRequest('/api/v1/playback/start', {
+        method: 'POST',
+        body: JSON.stringify({
+          course_id: courseId,
+          video_id: videoId,
+          quality
+        })
+      });
+
+      // 4. 返回播放資訊
+      return {
+        videoUrl: tokenData.cdnUrl,
+        credentials: tokenData.credentials,
+        sessionId: this.generateSessionId()
+      };
+    } catch (error) {
+      this.emit('playbackError', { courseId, videoId, error });
+      throw error;
+    }
   }
 
   // 所有 API 請求都會自動附加認證
