@@ -1,98 +1,149 @@
+# GoMore 冥想課程平台 API
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 專案簡介
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+冥想課程平台的後端 API 服務，採用 NestJS + MySQL + Redis 架構，提供影片串流、用戶認證、權限管理等功能。支援多平台 SDK 整合，部署於阿里雲 Kubernetes 環境。
 
-## Description
+### 核心功能
+- 🔐 設備優先認證 + 用戶綁定機制
+- 📱 多平台 SDK 支援 (iOS, Android, Web)
+- 🎥 影片串流和離線下載管理
+- 🛡️ 基於客戶端的 API 存取控制
+- ☁️ 阿里雲 OSS/STS 整合
+- 📊 結構化日誌 (Loki) 和監控
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 技術棧
+- **框架**: NestJS v11
+- **資料庫**: MySQL + Redis
+- **認證**: JWT + Passport
+- **雲端服務**: 阿里雲 OSS/STS
+- **部署**: Kubernetes + Docker
+- **監控**: Loki + Grafana
 
-## Project setup
+## 文檔目錄
 
-```bash
-$ npm install
-```
+### 核心文檔
+- 📋 [產品需求文件 (PRD)](./docs/meditation_platform_prd.md) - 完整的產品規格和技術架構
+- ✅ [開發任務清單](./docs/tasks.md) - 詳細的開發計劃和里程碑
 
-## Compile and run the project
+### 技術設計
+- 🔐 [認證流程設計](./docs/authentication-flow.md) - 三層認證模型和完整流程
+- 📱 [設備用戶認證](./docs/device-user-auth.md) - 設備優先的認證策略
+- 🛡️ [客戶端認證管理](./docs/client-authentication.md) - API 客戶端管理機制
+- 🔗 [SDK API 對應關係](./docs/sdk-api-mapping.md) - SDK 功能與 API 端點對應
+- 👑 [客戶端管理 API](./docs/client-management-api.md) - 管理員客戶端管理接口
 
-```bash
-# development
-$ npm run start
+## 快速開始
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+### 1. 環境設定
 
 ```bash
-# unit tests
-$ npm run test
+# 複製環境變數檔案
+cp .env.example .env
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# 安裝依賴套件
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 2. 資料庫設定
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# 建立 MySQL 資料庫
+mysql -u root -p
+CREATE DATABASE meditation_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 設定 Redis (如使用 Docker)
+docker run -d -p 6379:6379 --name meditation-redis redis:alpine
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 3. 啟動應用程式
 
-## Resources
+```bash
+# 開發模式
+npm run start:dev
 
-Check out a few resources that may come in handy when working with NestJS:
+# 除錯模式
+npm run start:debug
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# 生產模式
+npm run start:prod
+```
 
-## Support
+### 4. API 文檔
+啟動後可訪問 Swagger 文檔：`http://localhost:3000/docs`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 開發指令
 
-## Stay in touch
+```bash
+# 程式碼格式化
+npm run format
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# 程式碼檢查
+npm run lint
 
-## License
+# 單元測試
+npm run test
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# E2E 測試
+npm run test:e2e
+
+# 測試覆蓋率
+npm run test:cov
+
+# 建置應用程式
+npm run build
+```
+
+## 專案結構
+
+```
+src/
+├── config/          # 配置檔案
+├── modules/         # 功能模組
+│   ├── auth/        # 認證模組
+│   ├── users/       # 用戶模組
+│   ├── courses/     # 課程模組
+│   ├── videos/      # 影片模組
+│   └── ...
+├── common/          # 共用功能
+│   ├── guards/      # 守衛
+│   ├── decorators/  # 裝飾器
+│   ├── filters/     # 過濾器
+│   └── interceptors/# 攔截器
+├── database/        # 資料庫相關
+│   ├── entities/    # 實體
+│   └── migrations/  # 遷移檔案
+└── main.ts          # 應用程式入口
+```
+
+## 部署
+
+### Docker 部署
+```bash
+# 建置 Docker 映像
+docker build -t meditation-api .
+
+# 啟動容器
+docker run -p 3000:3000 meditation-api
+```
+
+### Kubernetes 部署
+請參考 `k8s/` 目錄下的配置檔案。
+
+## 開發規範
+
+1. **程式碼風格**: 遵循 ESLint 和 Prettier 設定
+2. **提交規範**: 使用 Conventional Commits 格式
+3. **測試要求**: 新功能需包含單元測試
+4. **文檔更新**: 重要變更需更新相關文檔
+
+## 相關連結
+
+- [NestJS 官方文檔](https://docs.nestjs.com)
+- [TypeORM 文檔](https://typeorm.io/)
+- [MySQL 文檔](https://dev.mysql.com/doc/)
+- [Redis 文檔](https://redis.io/documentation)
