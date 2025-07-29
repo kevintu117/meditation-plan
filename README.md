@@ -1,4 +1,4 @@
-# GoMore 冥想課程平台 API
+# GoMore 冥想音檔平台 API
 
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
@@ -6,12 +6,12 @@
 
 ## 專案簡介
 
-冥想課程平台的後端 API 服務，採用 NestJS + MySQL + Redis 架構，提供影片串流、用戶認證、權限管理等功能。支援多平台 SDK 整合，部署於阿里雲 Kubernetes 環境。
+冥想音檔平台的後端 API 服務，採用 NestJS + MySQL + Redis 架構，提供音檔串流、設備認證、權限管理等功能。支援多平台 SDK 整合，部署於阿里雲 Kubernetes 環境。
 
 ### 核心功能
-- 🔐 設備優先認證 + 用戶綁定機制
+- 🔐 純設備認證機制
 - 📱 多平台 SDK 支援 (iOS, Android, Web)
-- 🎥 影片串流和離線下載管理
+- 🎧 音檔串流和離線下載管理
 - 🛡️ 基於客戶端的 API 存取控制
 - ☁️ 阿里雲 OSS/STS 整合
 - 📊 結構化日誌 (Loki) 和監控
@@ -19,7 +19,7 @@
 ### 技術棧
 - **框架**: NestJS v11
 - **資料庫**: MySQL + Redis
-- **認證**: JWT + Passport
+- **認證**: 設備 JWT 認證
 - **雲端服務**: 阿里雲 OSS/STS
 - **部署**: Kubernetes + Docker
 - **監控**: Loki + Grafana
@@ -32,7 +32,6 @@
 
 ### 技術設計
 - 🔐 [認證流程設計](./docs/authentication-flow.md) - 三層認證模型和完整流程
-- 📱 [設備用戶認證](./docs/device-user-auth.md) - 設備優先的認證策略
 - 🛡️ [客戶端認證管理](./docs/client-authentication.md) - API 客戶端管理機制
 - 🔗 [SDK API 對應關係](./docs/sdk-api-mapping.md) - SDK 功能與 API 端點對應
 - 👑 [客戶端管理 API](./docs/client-management-api.md) - 管理員客戶端管理接口
@@ -54,10 +53,10 @@ npm install
 ```bash
 # 建立 MySQL 資料庫
 mysql -u root -p
-CREATE DATABASE meditation_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE meditation_audio_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # 設定 Redis (如使用 Docker)
-docker run -d -p 6379:6379 --name meditation-redis redis:alpine
+docker run -d -p 6379:6379 --name meditation-audio-redis redis:alpine
 ```
 
 ### 3. 啟動應用程式
@@ -104,10 +103,10 @@ npm run build
 src/
 ├── config/          # 配置檔案
 ├── modules/         # 功能模組
-│   ├── auth/        # 認證模組
-│   ├── users/       # 用戶模組
-│   ├── courses/     # 課程模組
-│   ├── videos/      # 影片模組
+│   ├── auth/        # 設備認證模組
+│   ├── devices/     # 設備管理模組
+│   ├── audios/      # 音檔模組
+│   ├── access/      # 權限控制模組
 │   └── ...
 ├── common/          # 共用功能
 │   ├── guards/      # 守衛
@@ -125,10 +124,10 @@ src/
 ### Docker 部署
 ```bash
 # 建置 Docker 映像
-docker build -t meditation-api .
+docker build -t meditation-audio-api .
 
 # 啟動容器
-docker run -p 3000:3000 meditation-api
+docker run -p 3000:3000 meditation-audio-api
 ```
 
 ### Kubernetes 部署
